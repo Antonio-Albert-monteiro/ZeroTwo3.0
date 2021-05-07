@@ -1,11 +1,13 @@
 const Discord = require("discord.js");
 
 module.exports = {
-	name: 'coinflip',
-	description: 'cara ou coroa',
+  name: 'coinflip',
+  description: 'Vamos brincar de cara ou coroa?',
+	aliases: ['cara', 'coroa'],
 	args: true,
-	aliases: ['coroa', 'cara'],
 	usage: '<cara> || <coroa>',
+	cooldown: 3,
+	devs: false,
 	async execute(client, message, args) {
 	    let array1 = ["cara", "coroa"];
 	    let rand = Math.floor(Math.random() * array1.length);

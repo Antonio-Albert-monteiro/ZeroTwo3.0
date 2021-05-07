@@ -7,8 +7,11 @@ const config = require("../config.json");
 const prefix = config.prefix;
 
 client.commands = new Discord.Collection();
+client.cooldowns = new Discord.Collection();
+const { cooldowns } = client;
 
 //////////////////////HANDLER///////////////////////////////
+//carrega os comandos
 const commandFolders = fs.readdirSync("./commands");
 for (const folder of commandFolders) {
   const commandFiles = fs
@@ -19,7 +22,7 @@ for (const folder of commandFolders) {
     client.commands.set(command.name, command);
   }
 }
-
+//pesquisa pelo comando
 const commandFiles = fs
   .readdirSync("././commands")
   .filter(file => file.endsWith(".js"));
@@ -29,7 +32,7 @@ for (const file of commandFiles) {
   client.commands.set(command.name, command);
 }
 
-client.on("message", message => {
+client.on("message", async(message) => {
   if (!message.content.startsWith(prefix) || message.author.bot) return;
 
   const args = message.content
@@ -38,9 +41,11 @@ client.on("message", message => {
     .split(/ +/);
   const commandName = args.shift().toLowerCase();
 
-  if (!client.commands.has(commandName))
+  if (!client.commands.has(commandName) && !client.commands.find(
+      cmd => cmd.aliases && cmd.aliases.includes(commandName)
+    ))
     return message.channel.send(
-      `${message.author}, o comando executado não existe`
+      `${message.author}, desculpe mas eu não tenho esse comando`
     );
 
   const command =
@@ -48,19 +53,47 @@ client.on("message", message => {
     client.commands.find(
       cmd => cmd.aliases && cmd.aliases.includes(commandName)
     );
+    
+  let devs = await database.ref(`Devs/Usuarios/${message.author.id}`).once("value")
+
+  if (command.devs && !devs.val()) {
+    return message.reply(`Esse comando é restrito, é so pode ser usado pelos meus devs!`)
+  }
 
   if (command.args && !args.length) {
-    let reply = `para esse comando funcionar ele precisa de argumentos!`;
-
-    if (command.usage) {
-      reply += `\nO uso correto seria: \`${prefix}${command.name} ${command.usage}\``;
-    }
-
-    return message.channel.send(reply);
+      let embed5 = new Discord.MessageEmbed()
+      .setTitle(`Erro de sintaxe:`)
+      .setDescription(`**Para esse comando funcionar ele precisa de argumentos! \nO uso correto seria:** \`\`\`${prefix}${command.name} ${command.usage}\`\`\``)
+      .setColor('#8A2BE2')
+      .setFooter(`Autor: ${message.author.username}`)
+      .setTimestamp()
+      
+    return message.channel.send(embed5);
   }
 
   if (command.guildOnly && message.channel.type === "dm") return;
+  
+           ////////////////////Cooldowns///////////////
 
+  if (!cooldowns.has(command.name)) {
+    cooldowns.set(command.name, new Discord.Collection());
+  }
+
+  const now = Date.now();
+  const timestamps = cooldowns.get(command.name);
+  const cooldownAmount = (command.cooldown || 3) * 1000;
+
+  if (timestamps.has(message.author.id)) {
+      const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
+
+	  if (now < expirationTime) {
+		  const timeLeft = (expirationTime - now) / 1000;
+		  return message.reply(`Espere ${timeLeft.toFixed(1)} segundos para ultilizar esse comando novamente.`);
+	  }
+  }
+  timestamps.set(message.author.id, now);
+  setTimeout(() => timestamps.delete(message.author.id), cooldownAmount);
+  
   try {
     command.execute(client, message, args);
   } catch (error) {

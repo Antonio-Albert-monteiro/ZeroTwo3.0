@@ -3,11 +3,14 @@ const firebase = require("firebase");
 const canvacord = require("canvacord");
 const database = firebase.database();
 
-
 module.exports = {
-	name: 'xp',
-	aliases: ['level', 'profile'],
-	description: 'Sei la',
+  name: 'xp',
+  description: 'Mostra o seu xp card',
+	aliases: ['level', 'exp'],
+	args: false,
+	usage: '<user>',
+	cooldown: 10,
+	devs: false,
 	async execute(client, message, args) {
 	    let links = [
 	        "https://imgur.com/e0YFo5D.jpeg",
@@ -18,7 +21,7 @@ module.exports = {
 	        "https://imgur.com/dtYDmdu.jpeg"
 	    ]
 	    let ale = links[Math.floor(Math.random() * links.length)]
-	    let user = message.author;
+	    let user = message.author 
 	    let avatar = user.avatarURL({ dynamic: false, format: "png", size: 1024 });
 	    let tag = user.discriminator;
 	    let name = user.username
